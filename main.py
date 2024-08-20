@@ -8,6 +8,7 @@ from models.modelspets import Prices as PricesModel
 from pydantic import BaseModel, Field
 from fastapi import APIRouter
 from routers.routerpets import routerpets 
+import os
 
 class ProductCreate(BaseModel):
     sku: str
@@ -29,5 +30,7 @@ Base.metadata.create_all(bind=engine)
 
 
         
-
-        
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="127.0.0.1", port=port)
