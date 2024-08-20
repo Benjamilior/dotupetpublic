@@ -18,5 +18,5 @@ class Prices(Base):
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     sku = Column(String, index=True)
     tienda = Column(String)
-    price = Column(Integer)
-    stock = Column(Integer)
+    price = Column(Integer, nullable=True)
+    stock = Column(Integer, nullable=True)
