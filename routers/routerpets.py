@@ -8,6 +8,7 @@ from models.modelspets import Prices as PricesModel
 from pydantic import BaseModel, Field
 from fastapi import APIRouter
 from sqlalchemy.orm import Session
+from typing import List, Optional
 
 
 class ProductCreate(BaseModel):
@@ -22,7 +23,6 @@ class PriceUpdate(BaseModel):
     tienda: str
     price: Optional[int] = None
     stock: Optional[int] = None
-routerpets = APIRouter()
 
 class PriceSchema(BaseModel):
     tienda: str
@@ -44,9 +44,17 @@ class ProductWithPricesSchema(BaseModel):
     class Config:
         orm_mode = True
 
-@routerpets.get("/product/{sku}",tags=["Renderizado"], response_model=ProductWithPricesSchema)
-def get_product_with_prices(sku: str):
-    db=Sessionlocal
+routerpets = APIRouter()
+
+def get_db():
+    db = Sessionlocal()
+    try:
+        yield db
+    finally:
+        db.close()
+        
+@routerpets.get("/product/{sku}", tags=["Renderizado"], response_model=ProductWithPricesSchema)
+def get_product_with_prices(sku: str, db: Session = Depends(get_db)):
     # Buscar el producto por SKU
     product = db.query(ProductsModel).filter(ProductsModel.sku == sku).first()
     
