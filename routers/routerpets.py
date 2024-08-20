@@ -23,11 +23,13 @@ class PriceUpdate(BaseModel):
     tienda: str
     price: Optional[int] = None
     stock: Optional[int] = None
+    link: Optional[str] = None
 
 class PriceSchema(BaseModel):
     tienda: str
     price: Optional[int] = None
     stock: Optional[int] = None
+    link: Optional[str] = None
 
     class Config:
         orm_mode = True
@@ -53,6 +55,8 @@ def get_db():
     finally:
         db.close()
         
+        
+#Busqueda de Info por SKU
 @routerpets.get("/product/{sku}", tags=["Renderizado"], response_model=ProductWithPricesSchema)
 def get_product_with_prices(sku: str, db: Session = Depends(get_db)):
     # Buscar el producto por SKU
@@ -65,7 +69,7 @@ def get_product_with_prices(sku: str, db: Session = Depends(get_db)):
     prices = db.query(PricesModel).filter(PricesModel.sku == sku).all()
 
     # Convertir los resultados de precios a PriceSchema
-    price_schemas = [PriceSchema(tienda=price.tienda, price=price.price, stock=price.stock) for price in prices]
+    price_schemas = [PriceSchema(tienda=price.tienda, price=price.price, stock=price.stock, link=price.link) for price in prices]
 
     # Construir la respuesta usando los esquemas definidos
     return ProductWithPricesSchema(
@@ -74,9 +78,13 @@ def get_product_with_prices(sku: str, db: Session = Depends(get_db)):
         description=product.description,
         category=product.category,
         marca=product.marca,
-        prices=price_schemas
+        prices=price_schemas,
+        
     )
 
+
+      
+#Para Subir Info        
 @routerpets.post("/petsprice/", description="Register a new price 1 a 1", tags=["pets prices"])
 def register_price(price: PriceUpdate):
     db = Sessionlocal()
@@ -139,3 +147,6 @@ def register_products(products: List[ProductCreate]):
     finally:
         db.close()
 
+
+        
+        

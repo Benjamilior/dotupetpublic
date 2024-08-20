@@ -11,6 +11,7 @@ class Products(Base):
     description = Column(String)
     category = Column(String)
     marca = Column(String)
+    
 
 class Prices(Base):
     __tablename__ = 'prices'
@@ -20,3 +21,4 @@ class Prices(Base):
     tienda = Column(String)
     price = Column(Integer, nullable=True)
     stock = Column(Integer, nullable=True)
+    link = Column(String)
