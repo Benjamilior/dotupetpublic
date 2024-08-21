@@ -8,6 +8,7 @@ from models.modelspets import Prices as PricesModel
 from pydantic import BaseModel, Field
 from fastapi import APIRouter
 from routers.routerpets import routerpets 
+from fastapi.middleware.cors import CORSMiddleware
 import os
 
 class ProductCreate(BaseModel):
@@ -22,7 +23,19 @@ app = FastAPI(
     description= "API Pets",
     version= "0.0.1"
 )
+origins = [
+   "http://localhost:3000/",
+   "http://localhost",
+]
 
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"]
+)
 app.include_router(routerpets)
 
 #Creacion de la instacia de Base de Datos
