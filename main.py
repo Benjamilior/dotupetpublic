@@ -17,6 +17,7 @@ class ProductCreate(BaseModel):
     description: Optional[str] = None
     category: Optional[str] = None
     marca: Optional[str] = None
+    links: Optional[str] = None
 
 app = FastAPI(
     title= "API Pets",

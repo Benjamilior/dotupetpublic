@@ -80,6 +80,7 @@ def get_product_with_prices(sku: str, db: Session = Depends(get_db)):
         description=product.description,
         category=product.category,
         marca=product.marca,
+        links=product.links,
         prices=price_schemas,
         
     )
@@ -151,5 +152,30 @@ def register_products(products: List[ProductCreate]):
         db.close()
 
 
+class LinkUpdate(BaseModel):
+    links: str
+
+@routerpets.put("/petsproductput/{sku}", description="Update product links by SKU", tags=["pets products"])
+def update_product(sku: str, link_update: LinkUpdate):
+    db = Sessionlocal()
+    try:
+        # Query the product by SKU
+        db_product = db.query(ProductsModel).filter(ProductsModel.sku == sku).first()
         
+        if not db_product:
+            raise HTTPException(status_code=404, detail="Product not found")
         
+        # Update the 'links' field
+        db_product.links = link_update.links
+        
+        # Commit the changes
+        db.commit()
+        db.refresh(db_product)
+        
+        return {"message": "Product links updated", "product": db_product.id}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+    finally:
+        db.close()
+
