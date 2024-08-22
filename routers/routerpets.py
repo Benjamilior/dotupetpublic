@@ -17,6 +17,7 @@ class ProductCreate(BaseModel):
     description: Optional[str] = None
     category: Optional[str] = None
     marca: Optional[str] = None
+    links: Optional[str] = None
     
 class PriceUpdate(BaseModel):
     sku: str
@@ -41,6 +42,7 @@ class ProductWithPricesSchema(BaseModel):
     description: Optional[str] = None
     category: Optional[str] = None
     marca: Optional[str] = None
+    links: Optional[str] = None
     prices: List[PriceSchema]
 
     class Config:
@@ -130,7 +132,8 @@ def register_product(product: ProductCreate):
         raise HTTPException(status_code=400, detail=str(e))
     finally:
         db.close()
-        
+
+#Subir productos en masa
 @routerpets.post("/petsbulkupdate/", description="Register a new product in bulk", tags=["pets products"])
 def register_products(products: List[ProductCreate]):
     db = Sessionlocal()
