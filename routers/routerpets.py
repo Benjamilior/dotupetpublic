@@ -154,6 +154,10 @@ def register_products(products: List[ProductCreate]):
 
 class LinkUpdate(BaseModel):
     links: str
+    
+class LinkUpdateBulk(BaseModel):
+    sku: str
+    links: str
 
 @routerpets.put("/petsproductput/{sku}", description="Update product links by SKU", tags=["pets products"])
 def update_product(sku: str, link_update: LinkUpdate):
@@ -173,6 +177,33 @@ def update_product(sku: str, link_update: LinkUpdate):
         db.refresh(db_product)
         
         return {"message": "Product links updated", "product": db_product.id}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+    finally:
+        db.close()
+
+@routerpets.put("/bulk_update_products", description="Bulk update product links by SKU", tags=["pets products"])
+def bulk_update_products(products: List[LinkUpdateBulk]):
+    db = Sessionlocal()
+    try:
+        updated_products = []
+        for product in products:
+            # Query the product by SKU
+            db_product = db.query(ProductsModel).filter(ProductsModel.sku == product.sku).first()
+            
+            if not db_product:
+                raise HTTPException(status_code=404, detail=f"Product with SKU {product.sku} not found")
+            
+            # Update the 'links' field
+            db_product.links = product.links
+            
+            updated_products.append(db_product.id)
+        
+        # Commit the changes
+        db.commit()
+        
+        return {"message": "Product links updated", "updated_products": updated_products}
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=400, detail=str(e))
