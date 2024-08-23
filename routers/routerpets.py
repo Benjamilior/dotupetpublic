@@ -59,7 +59,7 @@ def get_db():
         
         
 #Busqueda de Info por SKU
-@routerpets.get("/product/{sku}", tags=["Renderizado"], response_model=ProductWithPricesSchema)
+@routerpets.get("/product/{sku}", description="Get product by SKU", tags=["Renderizado"], response_model=ProductWithPricesSchema)
 def get_product_with_prices(sku: str, db: Session = Depends(get_db)):
     # Buscar el producto por SKU
     product = db.query(ProductsModel).filter(ProductsModel.sku == sku).first()
@@ -154,11 +154,6 @@ def register_products(products: List[ProductCreate]):
 
 class LinkUpdate(BaseModel):
     links: str
-    
-class LinkUpdateBulk(BaseModel):
-    sku: str
-    links: str
-
 @routerpets.put("/petsproductput/{sku}", description="Update product links by SKU", tags=["pets products"])
 def update_product(sku: str, link_update: LinkUpdate):
     db = Sessionlocal()
@@ -183,6 +178,9 @@ def update_product(sku: str, link_update: LinkUpdate):
     finally:
         db.close()
 
+class LinkUpdateBulk(BaseModel):
+    sku: str
+    links: str
 @routerpets.put("/bulk_update_products", description="Bulk update product links by SKU", tags=["pets products"])
 def bulk_update_products(products: List[LinkUpdateBulk]):
     db = Sessionlocal()
@@ -210,3 +208,37 @@ def bulk_update_products(products: List[LinkUpdateBulk]):
     finally:
         db.close()
 
+class PriceUpdateBulk(BaseModel):
+    sku: str
+    tienda: str
+    price: Optional[int] = None
+    stock: Optional[int] = None
+    
+@routerpets.put("/bulk_update_prices", description="Bulk update price and stock by SKU and store", tags=["pets prices"])
+def bulk_update_prices(price_updates: List[PriceUpdateBulk], db: Session = Depends(get_db)):
+    try:
+        updated_records = []
+        for update in price_updates:
+            # Buscar el registro de precio por SKU y tienda
+            price_record = db.query(PricesModel).filter(PricesModel.sku == update.sku, PricesModel.tienda == update.tienda).first()
+            
+            if not price_record:
+                raise HTTPException(status_code=404, detail=f"Price record with SKU {update.sku} and store {update.tienda} not found")
+            
+            # Actualizar el precio y stock si se proporcionan nuevos valores
+            if update.price is not None:
+                price_record.price = update.price
+            if update.stock is not None:
+                price_record.stock = update.stock
+            
+            updated_records.append({"sku": update.sku, "tienda": update.tienda})
+        
+        # Confirmar los cambios
+        db.commit()
+        
+        return {"message": "Prices and stock updated", "updated_records": updated_records}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+    finally:
+        db.close()
