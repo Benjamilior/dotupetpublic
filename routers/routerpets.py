@@ -9,6 +9,10 @@ from pydantic import BaseModel, Field
 from fastapi import APIRouter
 from sqlalchemy.orm import Session
 from typing import List, Optional
+from sqlalchemy.exc import SQLAlchemyError
+from typing import List, Dict
+from fastapi import APIRouter, HTTPException, Depends
+from sqlalchemy.orm import Session
 
 
 class ProductCreate(BaseModel):
@@ -214,16 +218,48 @@ class PriceUpdateBulk(BaseModel):
     price: Optional[int] = None
     stock: Optional[int] = None
     
+# @routerpets.put("/bulk_update_prices", description="Bulk update price and stock by SKU and store", tags=["pets prices"])
+# def bulk_update_prices(price_updates: List[PriceUpdateBulk], db: Session = Depends(get_db)):
+#     try:
+#         updated_records = []
+#         for update in price_updates:
+#             # Buscar el registro de precio por SKU y tienda
+#             price_record = db.query(PricesModel).filter(PricesModel.sku == update.sku, PricesModel.tienda == update.tienda).first()
+            
+#             if not price_record:
+#                 raise HTTPException(status_code=404, detail=f"Price record with SKU {update.sku} and store {update.tienda} not found")
+            
+#             # Actualizar el precio y stock si se proporcionan nuevos valores
+#             if update.price is not None:
+#                 price_record.price = update.price
+#             if update.stock is not None:
+#                 price_record.stock = update.stock
+            
+#             updated_records.append({"sku": update.sku, "tienda": update.tienda})
+        
+#         # Confirmar los cambios
+#         db.commit()
+        
+#         return {"message": "Prices and stock updated", "updated_records": updated_records}
+#     except Exception as e:
+#         db.rollback()
+#         raise HTTPException(status_code=400, detail=str(e))
+#     finally:
+#         db.close()
 @routerpets.put("/bulk_update_prices", description="Bulk update price and stock by SKU and store", tags=["pets prices"])
 def bulk_update_prices(price_updates: List[PriceUpdateBulk], db: Session = Depends(get_db)):
+    updated_records = []
+    failed_records = []
+
     try:
-        updated_records = []
         for update in price_updates:
             # Buscar el registro de precio por SKU y tienda
             price_record = db.query(PricesModel).filter(PricesModel.sku == update.sku, PricesModel.tienda == update.tienda).first()
             
             if not price_record:
-                raise HTTPException(status_code=404, detail=f"Price record with SKU {update.sku} and store {update.tienda} not found")
+                # Agregar a los registros fallidos si no se encuentra el SKU o tienda
+                failed_records.append({"sku": update.sku, "tienda": update.tienda, "error": "Record not found"})
+                continue  # Seguir con el siguiente registro
             
             # Actualizar el precio y stock si se proporcionan nuevos valores
             if update.price is not None:
@@ -233,12 +269,23 @@ def bulk_update_prices(price_updates: List[PriceUpdateBulk], db: Session = Depen
             
             updated_records.append({"sku": update.sku, "tienda": update.tienda})
         
-        # Confirmar los cambios
-        db.commit()
+        # Confirmar los cambios si hay registros actualizados
+        if updated_records:
+            db.commit()
+        else:
+            db.rollback()  # Si no hubo actualizaciones, no confirmar
         
-        return {"message": "Prices and stock updated", "updated_records": updated_records}
+    except SQLAlchemyError as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
     except Exception as e:
         db.rollback()
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=f"An unexpected error occurred: {str(e)}")
     finally:
         db.close()
+
+    return {
+        "message": "Bulk update completed",
+        "updated_records": updated_records,
+        "failed_records": failed_records
+    }
